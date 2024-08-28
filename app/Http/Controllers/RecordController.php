@@ -16,25 +16,9 @@ class RecordController extends Controller
 {
     public function index()
     {
-        // Obtener todos los registros
         $records = Record::all();
+        $weeklyTotals = $this->getWeeklyTotals();
 
-        // Agrupar por semanas (de martes a lunes)
-        $weeklyTotals = DB::table('records')
-            ->select(DB::raw('DATE_TRUNC(\'week\', created_at) as week,
-        MIN(created_at) as start_date,
-        MAX(created_at) as end_date,
-        SUM(total_income) as total_facturado,
-        SUM(cash_income) as efectivo,
-        SUM(nequi_income) as nequi,
-        SUM(total_income) - SUM(cash_income) - SUM(nequi_income) as uber,
-        SUM(total_income) * 0.1 as carro_10,
-        SUM(total_income) - SUM(fuel_cost) - (SUM(total_income) * 0.1) as conductor'))
-            ->groupBy(DB::raw('DATE_TRUNC(\'week\', created_at)'))
-            ->get();
-
-        // Asegúrate de que el nombre de la vista es correcto
-//        return view('index', compact('records', 'weeklyTotals'));
         return view('index', [
             'records' => $records,
             'record' => null,
@@ -78,11 +62,12 @@ class RecordController extends Controller
     public function edit($id)
     {
         $record = Record::findOrFail($id);
+        $weeklyTotals = $this->getWeeklyTotals();
 
-        // Pasar el registro que se está editando a la vista
         return view('index', [
             'records' => Record::all(),
-            'record' => $record
+            'record' => $record,
+            'weeklyTotals' => $weeklyTotals
         ]);
     }
 
@@ -114,5 +99,21 @@ class RecordController extends Controller
         $record->delete();
 
         return redirect()->route('index')->with('success', 'Registro eliminado con éxito.');
+    }
+
+    private function getWeeklyTotals()
+    {
+        return DB::table('records')
+            ->select(DB::raw('DATE_TRUNC(\'week\', created_at) as week,
+                MIN(created_at) as start_date,
+                MAX(created_at) as end_date,
+                SUM(total_income) as total_facturado,
+                SUM(cash_income) as efectivo,
+                SUM(nequi_income) as nequi,
+                SUM(total_income) - SUM(cash_income) - SUM(nequi_income) as uber,
+                SUM(total_income) * 0.1 as carro_10,
+                SUM(total_income) - SUM(fuel_cost) - (SUM(total_income) * 0.1) as conductor'))
+            ->groupBy(DB::raw('DATE_TRUNC(\'week\', created_at)'))
+            ->get();
     }
 }
